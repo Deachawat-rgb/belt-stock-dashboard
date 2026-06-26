@@ -78,7 +78,7 @@ function render(){
   $("#refSec").textContent = (REFRESH/1000);
   renderFilters();
   renderStock();
-  renderBudget();
+  renderLocations();
 }
 
 /* =================== FILTER BAR =================== */
@@ -115,7 +115,7 @@ function renderFilters(){
     const sel=$("#"+id);
     if(sel && !sel.dataset.bound){
       sel.dataset.bound="1";
-      sel.onchange=()=>{ applyFilterState(); renderStock(); };
+      sel.onchange=()=>{ applyFilterState(); renderStock(); renderLocations(); };
     }
   });
   const rb=$("#fReset");
@@ -123,7 +123,7 @@ function renderFilters(){
     rb.dataset.bound="1";
     rb.onclick=()=>{
       ["fYear","fMonth","fType","fLoc","fSize"].forEach(id=>{ const s=$("#"+id); if(s) s.value="ALL"; });
-      applyFilterState(); renderStock();
+      applyFilterState(); renderStock(); renderLocations();
     };
   }
   applyFilterState();
@@ -221,53 +221,72 @@ function renderStock(){
   });
 }
 
-/* =================== BUDGET =================== */
-function renderBudget(){
-  const B = DATA.budget.slice().sort((a,b)=>b.budget-a.budget);
-  const tBud=sum(B,r=>r.budget), tUsed=sum(B,r=>r.used), tRem=tBud-tUsed;
-  const active=B.filter(r=>r.used>0).length;
+/* =================== LOCATIONS (รายจุด) =================== */
+const SIZE_COLORS = {"1800":"#2563eb","2000":"#0ea5e9","2200":"#10b981","2400":"#f59e0b"};
+const SIZE_ORDER  = ["1800","2000","2200","2400"];
+// ตัวกรองขนาดเป็นชื่อเต็ม (เช่น "2400 CR (DC)") — ข้อมูลรายจุดเก็บตามความกว้างฐาน
+const baseWidth = sz => { const m=String(sz).match(/\d+/); return m?m[0]:String(sz); };
 
-  $("#budgetKpis").innerHTML = `
-    <div class="kpi feat"><div class="lab">งบประมาณรวม</div>
-      <div class="val">${fmtM(tBud)}</div><div class="sub">${B.length} หมวด</div></div>
-    <div class="kpi accent-t"><div class="lab">ใช้ไปแล้ว</div>
-      <div class="val" style="color:var(--teal)">${fmtM(tUsed)}</div>
-      <div class="bar"><span style="width:${pct(tUsed,tBud)}%;background:var(--teal)"></span></div>
-      <div class="sub">${fmt(pct(tUsed,tBud),1)}% ของงบ</div></div>
-    <div class="kpi accent-g"><div class="lab">คงเหลือ</div>
-      <div class="val txt-g">${fmtM(tRem)}</div>
-      <div class="sub">${fmt(pct(tRem,tBud),1)}% ของงบ</div></div>
-    <div class="kpi accent-a"><div class="lab">หมวดที่มีการใช้จ่าย</div>
-      <div class="val" style="color:var(--amber)">${active}/${B.length}</div>
-      <div class="sub">หมวดที่เริ่มเบิกแล้ว</div></div>`;
+function locFiltered(){
+  const target = FILT.size==="ALL" ? null : baseWidth(FILT.size);
+  return (window.LOCATION_STOCK||[]).map(r=>{
+    const bySize={}; let total=0;
+    Object.keys(r.bySize||{}).forEach(k=>{
+      if(target && k!==target) return;
+      bySize[k]=r.bySize[k]; total+=r.bySize[k];
+    });
+    return {loc:r.loc, bySize, total};
+  }).filter(r=>r.total>0).sort((a,b)=>b.total-a.total);
+}
 
-  // table
-  const tb=$("#budgetTable tbody"); tb.innerHTML="";
-  B.forEach(r=>{
-    const rem=r.budget-r.used, p=pct(r.used,r.budget);
-    const over=p>100;
+function renderLocations(){
+  const rows = locFiltered();
+  const grand = sum(rows,r=>r.total);
+  const labels = rows.map(r=>r.loc);
+  const sizesPresent = SIZE_ORDER.filter(sz=> rows.some(r=>r.bySize[sz]>0));
+  const datasets = sizesPresent.map(sz=>({
+    label: "ขนาด "+sz, data: rows.map(r=>r.bySize[sz]||0),
+    backgroundColor: SIZE_COLORS[sz]||"#64748b", borderRadius:3, maxBarThickness:22
+  }));
+  drawLocBar("locBar", labels, datasets);
+
+  const tb=$("#locTable tbody"); tb.innerHTML="";
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan="4" class="l" style="color:var(--muted)">— ไม่มีข้อมูลตามตัวกรอง —</td></tr>`; }
+  rows.forEach(r=>{
+    const szs = SIZE_ORDER.filter(s=>r.bySize[s]>0).join(", ");
+    const p = pct(r.total, grand);
     tb.innerHTML += `<tr>
-      <td class="l"><b>${r.code}</b></td>
-      <td class="l">${r.name}</td>
-      <td>${fmtB(r.budget)}</td>
-      <td>${fmtB(r.used)}</td>
-      <td class="${rem<0?'txt-r':''}">${fmtB(rem)}</td>
-      <td><span class="pill ${over?'p-r':(p>=80?'p-a':'p-b')}">${fmt(p,1)}%</span></td></tr>`;
+      <td class="l"><b>${r.loc}</b></td>
+      <td class="l">${szs}</td>
+      <td>${fmt(r.total,1)}</td>
+      <td><div class="minibar"><span style="width:${p}%"></span></div></td></tr>`;
   });
-  $("#budgetTable tfoot").innerHTML=`<tr>
-    <td class="l" colspan="2">รวมทั้งหมด</td>
-    <td>${fmtB(tBud)}</td><td>${fmtB(tUsed)}</td><td>${fmtB(tRem)}</td>
-    <td>${fmt(pct(tUsed,tBud),1)}%</td></tr>`;
+  $("#locTable tfoot").innerHTML = `<tr>
+    <td class="l" colspan="2">รวมทั้งหมด (${rows.length} จุด)</td>
+    <td>${fmt(grand,1)}</td><td></td></tr>`;
+}
 
-  // charts
-  const labels=B.map(r=>r.code);
-  drawBar("budgetBar", labels,
-    [{label:"ใช้ไป",data:B.map(r=>r.used),color:"#2563eb"},
-     {label:"คงเหลือ",data:B.map(r=>Math.max(0,r.budget-r.used)),color:"#cbd5e1"}],
-    "", true, true);
-  // donut of used by code (skip zero)
-  const used=B.filter(r=>r.used>0);
-  drawDonut("budgetDonut", used.map(r=>r.code), used.map(r=>r.used), "ใช้ไป", true);
+function drawLocBar(id, labels, datasets){
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart($("#"+id),{
+    type:"bar",
+    data:{labels, datasets},
+    options:{
+      indexAxis:"y",
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:"index",intersect:false},
+      scales:{
+        x:{stacked:true, beginAtZero:true, grid:{color:"#f1f5f9"},
+           ticks:{callback:v=>fmt(v)}, title:{display:true,text:"ความยาว (เมตร)"}},
+        y:{stacked:true, grid:{display:false}, ticks:{font:{size:11}}}
+      },
+      plugins:{
+        legend:{position:"top",labels:{boxWidth:12,usePointStyle:true,pointStyle:"circle"}},
+        datalabels:{display:false},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw,1)} ม.`}}
+      }
+    }
+  });
 }
 
 /* =================== CHART HELPERS =================== */
@@ -323,14 +342,7 @@ function drawDonut(id, labels, data, name="", money=false){
   });
 }
 
-/* =================== TABS / EVENTS =================== */
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
-  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-  t.classList.add("active");
-  $("#tab-stock").classList.toggle("hide", t.dataset.tab!=="stock");
-  $("#tab-budget").classList.toggle("hide", t.dataset.tab!=="budget");
-});
-
+/* =================== EVENTS =================== */
 $("#refreshBtn").onclick = function(){
   this.disabled = true;
   loadData().finally(()=> setTimeout(()=> this.disabled=false, 600));

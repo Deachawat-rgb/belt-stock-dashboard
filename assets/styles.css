@@ -110,7 +110,11 @@ a{color:inherit;text-decoration:none}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
   padding:16px 18px;box-shadow:var(--shadow)}
 .panel h3{margin:0 0 12px;font-size:15px;font-weight:800}
+.h3-note{font-weight:600;font-size:12px;color:var(--muted)}
 .chart-box{position:relative;height:320px}
+.chart-box.tall{height:560px}
+.minibar{height:7px;border-radius:6px;background:#eef2ff;overflow:hidden;min-width:70px;max-width:140px}
+.minibar>span{display:block;height:100%;border-radius:6px;background:var(--primary)}
 
 /* ---------- Table ---------- */
 .tbl-wrap{overflow-x:auto}
