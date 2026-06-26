@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>บันทึกเบิกจ่าย / ตัดสภาพ — Belt Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">BS</div>
+    <div class="brand">
+      <h1>บันทึกการเคลื่อนไหวสต็อกสายพาน</h1>
+      <p>เบิกจ่าย · ตัดสภาพ · รับเข้า</p>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn" href="index.html">← กลับหน้า Dashboard</a>
+  </div>
+
+  <div class="form-card">
+    <div id="msg" class="msg hide"></div>
+
+    <form id="entryForm">
+      <div class="field">
+        <label>ประเภทรายการ</label>
+        <div class="seg">
+          <label><input type="radio" name="type" value="เบิกจ่าย" checked><span>📤 เบิกจ่าย/นำไปใช้</span></label>
+          <label><input type="radio" name="type" value="ตัดสภาพ"><span>🗑️ ตัดสภาพ</span></label>
+          <label><input type="radio" name="type" value="รับเข้า"><span>📥 รับเข้า</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>ขนาดสายพาน (กว้าง)</label>
+        <select name="size" id="sizeSel" required>
+          <option value="1800">1800</option>
+          <option value="2000" selected>2000</option>
+          <option value="2000 CR">2000 CR</option>
+          <option value="2200">2200</option>
+          <option value="2400 CR (DC)">2400 CR (DC)</option>
+          <option value="2400 CR (Fine)">2400 CR (Fine)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>ความยาว (เมตร)</label>
+        <input type="number" name="length" step="0.1" min="0" placeholder="เช่น 247.6" required>
+      </div>
+
+      <div class="field">
+        <label>ตำแหน่ง / Location</label>
+        <input type="text" name="location" placeholder="เช่น N4 กอง4, ลานเก็บ">
+      </div>
+
+      <div class="field">
+        <label>ผู้บันทึก</label>
+        <input type="text" name="by" placeholder="ชื่อผู้บันทึก">
+      </div>
+
+      <div class="field">
+        <label>หมายเหตุ</label>
+        <textarea name="note" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+      </div>
+
+      <button class="btn primary" type="submit" id="submitBtn" style="width:100%;justify-content:center;padding:12px">
+        💾 บันทึกรายการ
+      </button>
+    </form>
+
+    <p style="color:var(--muted);font-size:12px;margin-top:14px;line-height:1.6">
+      • <b>เบิกจ่าย</b> = นำสายพานดีไปใช้ → ลด "ดี" ตามความยาว<br>
+      • <b>ตัดสภาพ</b> = สายพานเสื่อม/ชำรุด → ย้ายจาก "ดี" ไป "เสีย"<br>
+      • <b>รับเข้า</b> = รับสายพานใหม่/เก็บกู้เพิ่ม → เพิ่ม "ดี"
+    </p>
+  </div>
+
+  <div class="foot">Belt Stock Dashboard — หน้าบันทึกข้อมูล</div>
+</div>
+
+<script src="assets/config.js"></script>
+<script>
+const msg = document.getElementById("msg");
+function showMsg(text, ok){
+  msg.textContent = text;
+  msg.className = "msg " + (ok ? "ok" : "err");
+}
+document.getElementById("entryForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  const fd = new FormData(this);
+  const payload = {
+    action: "addTxn",
+    type: fd.get("type"),
+    size: fd.get("size"),
+    length: parseFloat(fd.get("length")) || 0,
+    location: fd.get("location") || "",
+    by: fd.get("by") || "",
+    note: fd.get("note") || ""
+  };
+  if(!window.APP_CONFIG || !window.APP_CONFIG.API_URL){
+    showMsg("⚠️ ยังไม่ได้ตั้งค่า API_URL ใน assets/config.js — บันทึกไม่ได้ (ดู README.md)", false);
+    return;
+  }
+  btn.disabled = true; btn.textContent = "กำลังบันทึก…";
+  try{
+    // ใช้ text/plain เพื่อเลี่ยง CORS preflight ของ Apps Script
+    const r = await fetch(window.APP_CONFIG.API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+    if(j.ok){
+      showMsg("✅ บันทึกสำเร็จ! (" + payload.type + " " + payload.size + " : " + payload.length + " ม.)", true);
+      this.reset();
+    }else{
+      showMsg("❌ ผิดพลาด: " + (j.error || "ไม่ทราบสาเหตุ"), false);
+    }
+  }catch(err){
+    showMsg("❌ เชื่อมต่อไม่ได้: " + err.message, false);
+  }finally{
+    btn.disabled = false; btn.textContent = "💾 บันทึกรายการ";
+  }
+});
+</script>
+</body>
+</html>

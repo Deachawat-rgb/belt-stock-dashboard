@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belt Stock Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="topbar">
+    <div class="logo">BS</div>
+    <div class="brand">
+      <h1>Belt Stock Dashboard</h1>
+      <p>สต็อกสายพาน &amp; งบประมาณจัดซื้อ — แผนกสายพาน</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="status">
+      <span class="dot" id="connDot"></span>
+      <span id="connText">กำลังเชื่อมต่อ…</span>
+    </div>
+    <a class="btn" href="entry.html">➕ บันทึกเบิกจ่าย/ตัดสภาพ</a>
+    <button class="btn primary" id="refreshBtn">↻ รีเฟรช</button>
+  </div>
+
+  <div class="banner hide" id="sampleBanner">
+    ⚠️ กำลังแสดง <b>ข้อมูลตัวอย่าง</b> — ยังไม่ได้ตั้งค่า API_URL ใน <code>assets/config.js</code> (ดูขั้นตอนใน README.md)
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="stock">📦 สต็อกสายพาน</div>
+    <div class="tab" data-tab="budget">💰 งบประมาณจัดซื้อ</div>
+  </div>
+
+  <!-- ============ STOCK TAB ============ -->
+  <section id="tab-stock">
+    <div class="kpis" id="stockKpis"></div>
+
+    <div class="chips" id="sizeChips"></div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>เปรียบเทียบ ดี / เสีย ตามขนาดสายพาน (เมตร)</h3>
+        <div class="chart-box"><canvas id="stockBar"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>สัดส่วนสต็อกดี (พร้อมใช้) ตามขนาด</h3>
+        <div class="chart-box"><canvas id="stockDonut"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>ตารางสต็อกแยกขนาด</h3>
+      <div class="tbl-wrap">
+        <table id="stockTable">
+          <thead><tr>
+            <th class="l">ขนาดสายพาน</th><th>เสีย (ม.)</th><th>ดี / พร้อมใช้ (ม.)</th>
+            <th>รวม (ม.)</th><th>% ดี</th><th>เก็บกู้ได้ (ม.)</th>
+          </tr></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h3>รายการเคลื่อนไหวล่าสุด (เบิกจ่าย / ตัดสภาพ / รับเข้า)</h3>
+      <div class="tbl-wrap">
+        <table id="txnTable">
+          <thead><tr>
+            <th class="l">วันที่-เวลา</th><th class="l">ประเภท</th><th class="l">ขนาด</th>
+            <th>ความยาว (ม.)</th><th class="l">ตำแหน่ง</th><th class="l">ผู้บันทึก</th><th class="l">หมายเหตุ</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BUDGET TAB ============ -->
+  <section id="tab-budget" class="hide">
+    <div class="kpis" id="budgetKpis"></div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>งบประมาณ vs ใช้ไปจริง (รายหมวด)</h3>
+        <div class="chart-box"><canvas id="budgetBar"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>สัดส่วนค่าใช้จ่าย (ใช้ไปจริง)</h3>
+        <div class="chart-box"><canvas id="budgetDonut"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>ตารางงบประมาณรายหมวด</h3>
+      <div class="tbl-wrap">
+        <table id="budgetTable">
+          <thead><tr>
+            <th class="l">CODE</th><th class="l">หมวด</th><th>งบประมาณ</th>
+            <th>ใช้ไป</th><th>คงเหลือ</th><th>% ใช้ไป</th>
+          </tr></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    อัปเดตล่าสุด: <span id="updatedAt">—</span> &nbsp;•&nbsp; รีเฟรชอัตโนมัติทุก <span id="refSec">30</span> วินาที
+    &nbsp;•&nbsp; Belt Stock Dashboard
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/sample-data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
