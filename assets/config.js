@@ -5,7 +5,7 @@
 //  ถ้ายังไม่ตั้ง ปล่อยว่างไว้ได้ — เว็บจะใช้ "ข้อมูลตัวอย่าง" แสดงผลก่อน
 // ===================================================================
 window.APP_CONFIG = {
-  API_URL: "",                 // <-- วาง URL ของ Apps Script Web App ตรงนี้
+  API_URL: "https://script.google.com/macros/s/AKfycbzORg_dcPu25E69KFZJHzxaUrV7wv7r_V-XhyF5XAKpYeGdg5ccD7GP_Jl8Si6XTzgwDA/exec",
   REFRESH_SECONDS: 30,         // รอบ refresh อัตโนมัติ (วินาที)
   CURRENCY: "฿"
 };
