@@ -98,7 +98,10 @@ function renderFilters(){
   const txns=DATA.transactions||[];
   const years=[...new Set(txns.map(x=>{const d=new Date(x.timestamp);return isNaN(d)?null:d.getFullYear();}).filter(Boolean))].sort((a,b)=>b-a);
   const types=[...new Set(txns.map(x=>x.type).filter(Boolean))];
-  const locs=[...new Set(txns.map(x=>x.location).filter(Boolean))].sort();
+  // จุด: เริ่มจากรายการต้นฉบับ (config) แล้วเติมจุดใหม่ที่โผล่ใน transactions
+  const baseLocs = window.LOCATIONS || [];
+  const txnLocs = txns.map(x=>x.location).filter(Boolean);
+  const locs=[...new Set([...baseLocs, ...txnLocs])];
   const sizes=DATA.stock.map(s=>s.size);
 
   fillSelect("fYear","ทุกปี", years.map(y=>({val:y, lab:(y+543)})));   // แสดง พ.ศ.

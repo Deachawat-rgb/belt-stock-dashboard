@@ -75,7 +75,8 @@
 
       <div class="field">
         <label>ตำแหน่ง / Location</label>
-        <input type="text" name="location" placeholder="เช่น N4 กอง4, ลานเก็บ">
+        <input type="text" name="location" list="locList" placeholder="เลือกหรือพิมพ์จุด เช่น N4, ลานเก็บสายพาน" autocomplete="off">
+        <datalist id="locList"></datalist>
       </div>
 
       <div class="field">
@@ -105,6 +106,13 @@
 
 <script src="assets/config.js"></script>
 <script>
+// เติมรายการจุด/Location ลง datalist จากค่ากลางใน config.js
+(function(){
+  const dl = document.getElementById("locList");
+  (window.LOCATIONS || []).forEach(loc=>{
+    const o = document.createElement("option"); o.value = loc; dl.appendChild(o);
+  });
+})();
 const msg = document.getElementById("msg");
 function showMsg(text, ok){
   msg.textContent = text;
