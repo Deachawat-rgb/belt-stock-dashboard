@@ -5,7 +5,8 @@ const CFG = window.APP_CONFIG || {};
 const CUR = CFG.CURRENCY || "฿";
 const REFRESH = (CFG.REFRESH_SECONDS || 30) * 1000;
 let DATA = null;
-let activeSize = "ALL";
+const FILT = { year:"ALL", month:"ALL", type:"ALL", loc:"ALL", size:"ALL" };
+const TH_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const charts = {};
 
 /* ---------- helpers ---------- */
@@ -75,25 +76,83 @@ function setConn(state){
 function render(){
   $("#updatedAt").textContent = thDate(DATA.updatedAt);
   $("#refSec").textContent = (REFRESH/1000);
-  renderSizeChips();
+  renderFilters();
   renderStock();
   renderBudget();
 }
 
-/* =================== STOCK =================== */
-function stockFiltered(){
-  return activeSize==="ALL" ? DATA.stock : DATA.stock.filter(s=>s.size===activeSize);
+/* =================== FILTER BAR =================== */
+// เติม option ลง select โดยคงค่าที่เลือกไว้
+function fillSelect(id, allLabel, values){
+  const sel=$("#"+id); if(!sel) return;
+  const cur=sel.value;
+  const opts=[`<option value="ALL">${allLabel}</option>`]
+    .concat(values.map(v=>`<option value="${v.val}">${v.lab}</option>`));
+  sel.innerHTML=opts.join("");
+  // คงค่าเดิมถ้ายังมีอยู่
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  sel.closest(".fb-item")?.classList.toggle("changed", sel.value!=="ALL");
 }
 
-function renderSizeChips(){
-  const box=$("#sizeChips");
-  const sizes=["ALL",...DATA.stock.map(s=>s.size)];
-  box.innerHTML = sizes.map(sz=>{
-    const lab = sz==="ALL" ? "ทุกขนาด" : sz;
-    return `<div class="chip ${sz===activeSize?'active':''}" data-size="${sz}">${lab}</div>`;
-  }).join("");
-  box.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{
-    activeSize=c.dataset.size; renderSizeChips(); renderStock();
+function renderFilters(){
+  const txns=DATA.transactions||[];
+  const years=[...new Set(txns.map(x=>{const d=new Date(x.timestamp);return isNaN(d)?null:d.getFullYear();}).filter(Boolean))].sort((a,b)=>b-a);
+  const types=[...new Set(txns.map(x=>x.type).filter(Boolean))];
+  const locs=[...new Set(txns.map(x=>x.location).filter(Boolean))].sort();
+  const sizes=DATA.stock.map(s=>s.size);
+
+  fillSelect("fYear","ทุกปี", years.map(y=>({val:y, lab:(y+543)})));   // แสดง พ.ศ.
+  fillSelect("fMonth","ทุกเดือน", TH_MONTHS.map((m,i)=>({val:i+1, lab:m})));
+  fillSelect("fType","ทุกประเภท", types.map(t=>({val:t, lab:t})));
+  fillSelect("fLoc","ทุกจุด", locs.map(l=>({val:l, lab:l})));
+  fillSelect("fSize","ทุกขนาด", sizes.map(s=>({val:s, lab:s})));
+
+  // ผูก event ครั้งเดียว
+  ["fYear","fMonth","fType","fLoc","fSize"].forEach(id=>{
+    const sel=$("#"+id);
+    if(sel && !sel.dataset.bound){
+      sel.dataset.bound="1";
+      sel.onchange=()=>{ applyFilterState(); renderStock(); };
+    }
+  });
+  const rb=$("#fReset");
+  if(rb && !rb.dataset.bound){
+    rb.dataset.bound="1";
+    rb.onclick=()=>{
+      ["fYear","fMonth","fType","fLoc","fSize"].forEach(id=>{ const s=$("#"+id); if(s) s.value="ALL"; });
+      applyFilterState(); renderStock();
+    };
+  }
+  applyFilterState();
+}
+
+function applyFilterState(){
+  FILT.year = $("#fYear")?.value || "ALL";
+  FILT.month= $("#fMonth")?.value || "ALL";
+  FILT.type = $("#fType")?.value || "ALL";
+  FILT.loc  = $("#fLoc")?.value || "ALL";
+  FILT.size = $("#fSize")?.value || "ALL";
+  ["fYear","fMonth","fType","fLoc","fSize"].forEach(id=>{
+    const s=$("#"+id); s?.closest(".fb-item")?.classList.toggle("changed", s.value!=="ALL");
+  });
+}
+
+/* =================== STOCK =================== */
+// สต็อกเป็นภาพรวมปัจจุบัน มีมิติเดียวคือ "ขนาด"
+function stockFiltered(){
+  return FILT.size==="ALL" ? DATA.stock : DATA.stock.filter(s=>s.size===FILT.size);
+}
+
+// รายการเคลื่อนไหว กรองได้ครบทุกมิติ
+function txnFiltered(){
+  return (DATA.transactions||[]).filter(x=>{
+    if(FILT.size!=="ALL" && String(x.size)!==FILT.size) return false;
+    if(FILT.type!=="ALL" && x.type!==FILT.type) return false;
+    if(FILT.loc!=="ALL"  && x.location!==FILT.loc) return false;
+    const d=new Date(x.timestamp);
+    if(FILT.year!=="ALL"  && (isNaN(d)||d.getFullYear()!=+FILT.year)) return false;
+    if(FILT.month!=="ALL" && (isNaN(d)||(d.getMonth()+1)!=+FILT.month)) return false;
+    return true;
   });
 }
 
@@ -105,7 +164,7 @@ function renderStock(){
   $("#stockKpis").innerHTML = `
     <div class="kpi feat"><div class="lab">สายพานทั้งหมด</div>
       <div class="val">${fmt(tAll,0)} <span style="font-size:14px">ม.</span></div>
-      <div class="sub">${activeSize==="ALL"?DATA.stock.length+" ขนาด":"ขนาด "+activeSize}</div></div>
+      <div class="sub">${FILT.size==="ALL"?DATA.stock.length+" ขนาด":"ขนาด "+FILT.size}</div></div>
     <div class="kpi accent-g"><div class="lab">ดี / พร้อมใช้</div>
       <div class="val txt-g">${fmt(tGood,0)}</div>
       <div class="bar"><span style="width:${pct(tGood,tAll)}%;background:var(--green)"></span></div>
@@ -144,8 +203,8 @@ function renderStock(){
 
   // transactions
   const tt=$("#txnTable tbody"); tt.innerHTML="";
-  const txns = (DATA.transactions||[]).slice(0,12);
-  if(!txns.length){ tt.innerHTML=`<tr><td colspan="7" class="l" style="color:var(--muted)">— ยังไม่มีรายการ —</td></tr>`; }
+  const txns = txnFiltered().slice(0,20);
+  if(!txns.length){ tt.innerHTML=`<tr><td colspan="7" class="l" style="color:var(--muted)">— ไม่มีรายการตามตัวกรอง —</td></tr>`; }
   txns.forEach(x=>{
     const cls = x.type==="เบิกจ่าย"?"p-a":(x.type==="ตัดสภาพ"?"p-r":"p-g");
     tt.innerHTML += `<tr>

@@ -64,7 +64,19 @@
   <section id="tab-stock">
     <div class="kpis" id="stockKpis"></div>
 
-    <div class="chips" id="sizeChips"></div>
+    <div class="filterbar" id="filterBar">
+      <div class="fb-item"><label>ปี</label>
+        <select id="fYear"><option value="ALL">ทุกปี</option></select></div>
+      <div class="fb-item"><label>เดือน</label>
+        <select id="fMonth"><option value="ALL">ทุกเดือน</option></select></div>
+      <div class="fb-item"><label>ประเภทงาน</label>
+        <select id="fType"><option value="ALL">ทุกประเภท</option></select></div>
+      <div class="fb-item"><label>จุด (Location)</label>
+        <select id="fLoc"><option value="ALL">ทุกจุด</option></select></div>
+      <div class="fb-item"><label>ขนาดสายพาน</label>
+        <select id="fSize"><option value="ALL">ทุกขนาด</option></select></div>
+      <div class="fb-reset"><button id="fReset" type="button">↺ ล้างตัวกรอง</button></div>
+    </div>
 
     <div class="grid2">
       <div class="panel">

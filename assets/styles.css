@@ -75,12 +75,34 @@ a{color:inherit;text-decoration:none}
 .accent-g{border-left:4px solid var(--green)} .accent-r{border-left:4px solid var(--red)}
 .accent-a{border-left:4px solid var(--amber)} .accent-t{border-left:4px solid var(--teal)}
 
-/* ---------- Filter chips ---------- */
+/* ---------- Filter chips (legacy) ---------- */
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .chip{padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;
   font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);transition:.15s}
 .chip:hover{border-color:#cbd5e1}
 .chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* ---------- Filter bar (dropdowns) ---------- */
+.filterbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.fb-item{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fb-item label{font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.03em}
+.fb-item select{width:100%;padding:9px 30px 9px 12px;border:1px solid var(--line);
+  border-radius:9px;font-size:13px;font-weight:600;color:var(--ink,#0f172a);background:#fff;
+  font-family:inherit;cursor:pointer;transition:.15s;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center}
+.fb-item select:hover{border-color:#cbd5e1}
+.fb-item select:focus{outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.fb-item.changed select{border-color:var(--primary);color:var(--primary)}
+.fb-reset{align-self:end}
+.fb-reset button{padding:9px 14px;border:1px solid var(--line);border-radius:9px;
+  background:#f8fafc;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;
+  font-family:inherit;white-space:nowrap;transition:.15s}
+.fb-reset button:hover{border-color:#cbd5e1;color:var(--ink,#0f172a)}
 
 /* ---------- Panels / charts ---------- */
 .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
