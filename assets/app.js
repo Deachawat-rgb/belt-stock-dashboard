@@ -252,9 +252,28 @@ function openDrill(cat){
   }
 }
 
+/* รายละเอียดดี/เสีย/เก็บกู้ รายจุด "สด" = snapshot ปรับด้วย transactions
+   (ตรงกับ logic หลังบ้าน: เบิกจ่าย good-len / ตัดสภาพ good-len+dmg+len / รับเข้า good+len+rec+len) */
+function liveLocationDetail(){
+  const base = window.LOCATION_DETAIL || {good:[],damaged:[],recovered:[]};
+  const toMap = arr => { const m={}; (arr||[]).forEach(r=>m[r.loc]={m:r.m, smu:r.smu||0}); return m; };
+  const g=toMap(base.good), d=toMap(base.damaged), rc=toMap(base.recovered);
+  const adj=(map,loc,dm)=>{ if(!map[loc]) map[loc]={m:0,smu:0}; map[loc].m+=dm; };
+  (DATA.transactions||[]).forEach(t=>{
+    const loc=t.location; if(!loc) return; const len=+t.length||0;
+    if(t.type==="เบิกจ่าย"){ adj(g,loc,-len); }
+    else if(t.type==="ตัดสภาพ"){ adj(g,loc,-len); adj(d,loc,len); }
+    else if(t.type==="รับเข้า"){ adj(g,loc,len); adj(rc,loc,len); }
+  });
+  const toArr = map => Object.keys(map)
+    .map(loc=>({loc, m:Math.round(map[loc].m*10)/10, smu:map[loc].smu}))
+    .filter(r=>r.m>0.05);
+  return { good:toArr(g), damaged:toArr(d), recovered:toArr(rc) };
+}
+
 function renderDrill(cat){
   const meta = DRILL_META[cat]; if(!meta) return;
-  const data = ((window.LOCATION_DETAIL||{})[cat]||[]).slice().sort((a,b)=>b.m-a.m);
+  const data = (liveLocationDetail()[cat]||[]).slice().sort((a,b)=>b.m-a.m);
   const total = sum(data,r=>r.m);
   $("#drillPanel").classList.remove("hide");
   $("#drillTitle").innerHTML =
@@ -289,9 +308,29 @@ const SIZE_ORDER  = ["1800","2000","2200","2400"];
 // ตัวกรองขนาดเป็นชื่อเต็ม (เช่น "2400 CR (DC)") — ข้อมูลรายจุดเก็บตามความกว้างฐาน
 const baseWidth = sz => { const m=String(sz).match(/\d+/); return m?m[0]:String(sz); };
 
+/* คงคลังรายจุด "สด" = snapshot จาก Excel ปรับด้วย transactions
+   เบิกจ่าย → ลด, รับเข้า → เพิ่ม, ตัดสภาพ → คงเดิม (ดี→เสีย ของยังอยู่ที่จุด) */
+function liveLocationStock(){
+  const map = {};
+  (window.LOCATION_STOCK||[]).forEach(r=>{ map[r.loc]=Object.assign({}, r.bySize); });
+  (DATA.transactions||[]).forEach(t=>{
+    const loc=t.location; if(!loc) return;
+    const bw=baseWidth(t.size), len=+t.length||0;
+    if(!map[loc]) map[loc]={};
+    if(map[loc][bw]==null) map[loc][bw]=0;
+    if(t.type==="เบิกจ่าย")      map[loc][bw]-=len;
+    else if(t.type==="รับเข้า")  map[loc][bw]+=len;
+  });
+  return Object.keys(map).map(loc=>{
+    const bySize={};
+    Object.keys(map[loc]).forEach(k=>{ const v=Math.round(map[loc][k]*10)/10; if(v>0.05) bySize[k]=v; });
+    return {loc, bySize};
+  });
+}
+
 function locFiltered(){
   const target = FILT.size==="ALL" ? null : baseWidth(FILT.size);
-  return (window.LOCATION_STOCK||[]).map(r=>{
+  return liveLocationStock().map(r=>{
     const bySize={}; let total=0;
     Object.keys(r.bySize||{}).forEach(k=>{
       if(target && k!==target) return;
