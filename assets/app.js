@@ -196,13 +196,13 @@ function renderStock(){
     <td class="l">รวมทั้งหมด</td><td>${fmt(tDmg,1)}</td><td>${fmt(tGood,1)}</td>
     <td>${fmt(tAll,1)}</td><td>${fmt(pct(tGood,tAll),1)}%</td><td>${fmt(tRec,1)}</td></tr>`;
 
-  // charts (always full set for context)
-  const labels=DATA.stock.map(s=>s.size);
+  // charts — กรองตามขนาดที่เลือก (เหมือน KPI/ตาราง)
+  const labels=rows.map(s=>s.size);
   drawBar("stockBar", labels,
-    [{label:"เสีย",data:DATA.stock.map(s=>s.damaged),color:"#dc2626"},
-     {label:"ดี / พร้อมใช้",data:DATA.stock.map(s=>s.good),color:"#16a34a"}],
+    [{label:"เสีย",data:rows.map(s=>s.damaged),color:"#dc2626"},
+     {label:"ดี / พร้อมใช้",data:rows.map(s=>s.good),color:"#16a34a"}],
     " ม.");
-  drawDonut("stockDonut", labels, DATA.stock.map(s=>s.good), "ดี (ม.)");
+  drawDonut("stockDonut", labels, rows.map(s=>s.good), "ดี (ม.)");
 
   // transactions
   const tt=$("#txnTable tbody"); tt.innerHTML="";
