@@ -6,6 +6,7 @@ const CUR = CFG.CURRENCY || "฿";
 const REFRESH = (CFG.REFRESH_SECONDS || 30) * 1000;
 let DATA = null;
 const FILT = { year:"ALL", month:"ALL", type:"ALL", loc:"ALL", size:"ALL" };
+let activeDrill = null;   // หมวดที่กำลังเปิด drill-down: good / damaged / recovered
 const TH_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const charts = {};
 
@@ -168,17 +169,27 @@ function renderStock(){
     <div class="kpi feat"><div class="lab">สายพานทั้งหมด</div>
       <div class="val">${fmt(tAll,0)} <span style="font-size:14px">ม.</span></div>
       <div class="sub">${FILT.size==="ALL"?DATA.stock.length+" ขนาด":"ขนาด "+FILT.size}</div></div>
-    <div class="kpi accent-g"><div class="lab">ดี / พร้อมใช้</div>
+    <div class="kpi accent-g clickable" data-cat="good"><div class="lab">ดี / พร้อมใช้</div>
       <div class="val txt-g">${fmt(tGood,0)}</div>
       <div class="bar"><span style="width:${pct(tGood,tAll)}%;background:var(--green)"></span></div>
-      <div class="sub">${fmt(pct(tGood,tAll),1)}% ของทั้งหมด</div></div>
-    <div class="kpi accent-r"><div class="lab">เสีย / เสื่อมสภาพ</div>
+      <div class="sub">${fmt(pct(tGood,tAll),1)}% ของทั้งหมด</div>
+      <div class="hint">▾ คลิกดูแยกตามจุด</div></div>
+    <div class="kpi accent-r clickable" data-cat="damaged"><div class="lab">เสีย / เสื่อมสภาพ</div>
       <div class="val txt-r">${fmt(tDmg,0)}</div>
       <div class="bar"><span style="width:${pct(tDmg,tAll)}%;background:var(--red)"></span></div>
-      <div class="sub">${fmt(pct(tDmg,tAll),1)}% ของทั้งหมด</div></div>
-    <div class="kpi accent-t"><div class="lab">เก็บกู้ได้แล้ว (สะสม)</div>
+      <div class="sub">${fmt(pct(tDmg,tAll),1)}% ของทั้งหมด</div>
+      <div class="hint">▾ คลิกดูแยกตามจุด</div></div>
+    <div class="kpi accent-t clickable" data-cat="recovered"><div class="lab">เก็บกู้ได้แล้ว (สะสม)</div>
       <div class="val" style="color:var(--teal)">${fmt(tRec,0)}</div>
-      <div class="sub">หน่วย: เมตร</div></div>`;
+      <div class="sub">หน่วย: เมตร</div>
+      <div class="hint">▾ คลิกดูแยกตามจุด</div></div>`;
+
+  // ผูกคลิกการ์ด → เปิด drill-down รายจุด
+  $("#stockKpis").querySelectorAll(".kpi[data-cat]").forEach(c=>{
+    c.onclick=()=> openDrill(c.dataset.cat);
+    if(c.dataset.cat===activeDrill) c.classList.add("active");
+  });
+  if(activeDrill) renderDrill(activeDrill);
 
   // table
   const tb=$("#stockTable tbody"); tb.innerHTML="";
@@ -219,6 +230,57 @@ function renderStock(){
       <td class="l">${x.by||"-"}</td>
       <td class="l">${x.note||"-"}</td></tr>`;
   });
+}
+
+/* =================== DRILL-DOWN: ดี/เสีย/เก็บกู้ แยกตามจุด =================== */
+const DRILL_META = {
+  good:      {title:"ดี / พร้อมใช้",        color:"#16a34a", unit:"ม."},
+  damaged:   {title:"เสีย / เสื่อมสภาพ",    color:"#dc2626", unit:"ม."},
+  recovered: {title:"เก็บกู้ได้ (จากทะเบียน)", color:"#0d9488", unit:"ม."}
+};
+
+function openDrill(cat){
+  // คลิกซ้ำการ์ดเดิม = ปิด
+  activeDrill = (activeDrill===cat) ? null : cat;
+  $("#stockKpis").querySelectorAll(".kpi[data-cat]").forEach(c=>
+    c.classList.toggle("active", c.dataset.cat===activeDrill));
+  if(activeDrill){
+    renderDrill(activeDrill);
+    $("#drillPanel").scrollIntoView({behavior:"smooth", block:"nearest"});
+  }else{
+    $("#drillPanel").classList.add("hide");
+  }
+}
+
+function renderDrill(cat){
+  const meta = DRILL_META[cat]; if(!meta) return;
+  const data = ((window.LOCATION_DETAIL||{})[cat]||[]).slice().sort((a,b)=>b.m-a.m);
+  const total = sum(data,r=>r.m);
+  $("#drillPanel").classList.remove("hide");
+  $("#drillTitle").innerHTML =
+    `📍 <span style="color:${meta.color}">${meta.title}</span> — กระจายตามจุด
+     <span class="h3-note">(รวม ${fmt(total,1)} ม. · ${data.length} จุด)</span>`;
+
+  // chart
+  drawLocBar("drillBar", data.map(r=>r.loc),
+    [{label:"ความยาว (ม.)", data:data.map(r=>r.m),
+      backgroundColor:meta.color, borderRadius:3, maxBarThickness:22}]);
+
+  // table
+  const tb=$("#drillTable tbody"); tb.innerHTML="";
+  if(!data.length){ tb.innerHTML=`<tr><td colspan="4" class="l" style="color:var(--muted)">— ไม่มีข้อมูล —</td></tr>`; }
+  data.forEach(r=>{
+    const p=pct(r.m,total);
+    tb.innerHTML += `<tr>
+      <td class="l"><b>${r.loc}</b></td>
+      <td>${fmt(r.m,1)}</td>
+      <td>${r.smu>0?fmt(r.smu,0):"—"}</td>
+      <td><div class="minibar"><span style="width:${p}%;background:${meta.color}"></span></div></td></tr>`;
+  });
+  const tSmu=sum(data,r=>r.smu);
+  $("#drillTable tfoot").innerHTML=`<tr>
+    <td class="l">รวมทั้งหมด (${data.length} จุด)</td>
+    <td>${fmt(total,1)}</td><td>${fmt(tSmu,0)}</td><td></td></tr>`;
 }
 
 /* =================== LOCATIONS (รายจุด) =================== */
@@ -343,6 +405,11 @@ function drawDonut(id, labels, data, name="", money=false){
 }
 
 /* =================== EVENTS =================== */
+$("#drillClose").onclick = ()=>{ activeDrill=null;
+  $("#drillPanel").classList.add("hide");
+  $("#stockKpis").querySelectorAll(".kpi[data-cat]").forEach(c=>c.classList.remove("active"));
+};
+
 $("#refreshBtn").onclick = function(){
   this.disabled = true;
   loadData().finally(()=> setTimeout(()=> this.disabled=false, 600));

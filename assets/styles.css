@@ -74,6 +74,12 @@ a{color:inherit;text-decoration:none}
 .kpi.feat .bar{background:rgba(255,255,255,.25)} .kpi.feat .bar>span{background:#fff}
 .accent-g{border-left:4px solid var(--green)} .accent-r{border-left:4px solid var(--red)}
 .accent-a{border-left:4px solid var(--amber)} .accent-t{border-left:4px solid var(--teal)}
+.kpi.clickable{cursor:pointer;transition:.15s}
+.kpi.clickable:hover{box-shadow:0 4px 14px rgba(15,23,42,.12);transform:translateY(-2px)}
+.kpi.clickable.active{box-shadow:0 0 0 2px var(--primary)}
+.kpi .hint{font-size:11px;color:var(--primary);font-weight:700;margin-top:7px}
+.drill-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.drill-head h3{margin:0;font-size:16px;font-weight:800}
 
 /* ---------- Filter chips (legacy) ---------- */
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
