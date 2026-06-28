@@ -142,9 +142,33 @@ function applyFilterState(){
 }
 
 /* =================== STOCK =================== */
-// สต็อกเป็นภาพรวมปัจจุบัน มีมิติเดียวคือ "ขนาด"
+// สัดส่วน ดี/เสีย ต่อความยาว แยกตามความกว้างฐาน (จาก DATA.stock ที่เป็นข้อมูลจริง)
+function sizeRatio(bw){
+  const ms = DATA.stock.filter(s=>baseWidth(s.size)===bw);
+  const g=sum(ms,s=>s.good), d=sum(ms,s=>s.damaged), t=g+d;
+  return t>0 ? {g:g/t, d:d/t} : {g:1, d:0};
+}
+
+// เลือกจุด → ตรวจว่าเป็นการประมาณการหรือไม่
+const isLocView = () => FILT.loc!=="ALL";
+
+/* stock ที่จะแสดง:
+   - ไม่เลือกจุด → DATA.stock จริง (แยกขนาด)
+   - เลือกจุด → ประมาณการ ดี/เสีย จาก (ความยาวที่จุด × สัดส่วนดี/เสียของขนาด) */
 function stockFiltered(){
-  return FILT.size==="ALL" ? DATA.stock : DATA.stock.filter(s=>s.size===FILT.size);
+  if(!isLocView()){
+    let rows = DATA.stock.map(s=>({size:s.size, good:s.good, damaged:s.damaged, recovered:s.recovered, est:false}));
+    return FILT.size==="ALL" ? rows : rows.filter(s=>s.size===FILT.size);
+  }
+  const loc = liveLocationStock().find(r=>r.loc===FILT.loc);
+  if(!loc) return [];
+  let rows = Object.keys(loc.bySize).map(bw=>{
+    const len=loc.bySize[bw], r=sizeRatio(bw);
+    return { size:bw, good:len*r.g, damaged:len*r.d,
+             recovered:(loc.recBySize&&loc.recBySize[bw])||0, est:true };
+  });
+  if(FILT.size!=="ALL"){ const t=baseWidth(FILT.size); rows=rows.filter(s=>s.size===t); }
+  return rows.sort((a,b)=>(b.good+b.damaged)-(a.good+a.damaged));
 }
 
 // รายการเคลื่อนไหว กรองได้ครบทุกมิติ
@@ -164,25 +188,38 @@ function renderStock(){
   const rows = stockFiltered();
   const tGood=sum(rows,r=>r.good), tDmg=sum(rows,r=>r.damaged), tRec=sum(rows,r=>r.recovered);
   const tAll=tGood+tDmg;
+  const est = isLocView();
+  const estBadge = est ? `<span class="est-badge">ประมาณการ</span>` : "";
+  const featSub = est ? ("จุด "+FILT.loc+(FILT.size==="ALL"?"":" · ขนาด "+FILT.size))
+                      : (FILT.size==="ALL"?DATA.stock.length+" ขนาด":"ขนาด "+FILT.size);
 
   $("#stockKpis").innerHTML = `
-    <div class="kpi feat"><div class="lab">สายพานทั้งหมด</div>
+    <div class="kpi feat"><div class="lab">${est?"สายพานที่จุดนี้":"สายพานทั้งหมด"}</div>
       <div class="val">${fmt(tAll,0)} <span style="font-size:14px">ม.</span></div>
-      <div class="sub">${FILT.size==="ALL"?DATA.stock.length+" ขนาด":"ขนาด "+FILT.size}</div></div>
-    <div class="kpi accent-g clickable" data-cat="good"><div class="lab">ดี / พร้อมใช้</div>
+      <div class="sub">${featSub}</div></div>
+    <div class="kpi accent-g clickable" data-cat="good"><div class="lab">ดี / พร้อมใช้ ${estBadge}</div>
       <div class="val txt-g">${fmt(tGood,0)}</div>
       <div class="bar"><span style="width:${pct(tGood,tAll)}%;background:var(--green)"></span></div>
       <div class="sub">${fmt(pct(tGood,tAll),1)}% ของทั้งหมด</div>
       <div class="hint">▾ คลิกดูแยกตามจุด</div></div>
-    <div class="kpi accent-r clickable" data-cat="damaged"><div class="lab">เสีย / เสื่อมสภาพ</div>
+    <div class="kpi accent-r clickable" data-cat="damaged"><div class="lab">เสีย / เสื่อมสภาพ ${estBadge}</div>
       <div class="val txt-r">${fmt(tDmg,0)}</div>
       <div class="bar"><span style="width:${pct(tDmg,tAll)}%;background:var(--red)"></span></div>
       <div class="sub">${fmt(pct(tDmg,tAll),1)}% ของทั้งหมด</div>
       <div class="hint">▾ คลิกดูแยกตามจุด</div></div>
-    <div class="kpi accent-t clickable" data-cat="recovered"><div class="lab">เก็บกู้ได้แล้ว (สะสม)</div>
+    <div class="kpi accent-t clickable" data-cat="recovered"><div class="lab">เก็บกู้ได้${est?" (จุดนี้)":"แล้ว (สะสม)"}</div>
       <div class="val" style="color:var(--teal)">${fmt(tRec,0)}</div>
       <div class="sub">หน่วย: เมตร</div>
       <div class="hint">▾ คลิกดูแยกตามจุด</div></div>`;
+
+  // โน้ตประมาณการ เมื่อเลือกดูรายจุด
+  const note=$("#estNote");
+  if(est){
+    note.classList.remove("hide");
+    note.innerHTML = `⚠️ <b>กำลังดูจุด "${FILT.loc}"</b> — ไฟล์ต้นฉบับไม่ได้บันทึก "ดี/เสีย" แยกรายจุด `
+      + `ตัวเลข ดี/เสีย จึงเป็น <b>ค่าประมาณการ</b> จากสัดส่วนดี/เสียของแต่ละขนาด `
+      + `(ส่วน "ความยาวรวม" และ "เก็บกู้ได้" เป็นค่าจริงจากทะเบียน)`;
+  } else { note.classList.add("hide"); }
 
   // ผูกคลิกการ์ด → เปิด drill-down รายจุด
   $("#stockKpis").querySelectorAll(".kpi[data-cat]").forEach(c=>{
@@ -252,33 +289,38 @@ function openDrill(cat){
   }
 }
 
-/* รายละเอียดดี/เสีย/เก็บกู้ รายจุด "สด" = snapshot ปรับด้วย transactions
-   (ตรงกับ logic หลังบ้าน: เบิกจ่าย good-len / ตัดสภาพ good-len+dmg+len / รับเข้า good+len+rec+len) */
+/* รายละเอียดดี/เสีย/เก็บกู้ รายจุด "สด" จากคงคลังรายจุด
+   ดี/เสีย = ประมาณการ (ความยาวที่จุด × สัดส่วนของขนาด) · เก็บกู้ = ค่าจริง · SMU = ชม.ทำงานจริง */
 function liveLocationDetail(){
-  const base = window.LOCATION_DETAIL || {good:[],damaged:[],recovered:[]};
-  const toMap = arr => { const m={}; (arr||[]).forEach(r=>m[r.loc]={m:r.m, smu:r.smu||0}); return m; };
-  const g=toMap(base.good), d=toMap(base.damaged), rc=toMap(base.recovered);
-  const adj=(map,loc,dm)=>{ if(!map[loc]) map[loc]={m:0,smu:0}; map[loc].m+=dm; };
-  (DATA.transactions||[]).forEach(t=>{
-    const loc=t.location; if(!loc) return; const len=+t.length||0;
-    if(t.type==="เบิกจ่าย"){ adj(g,loc,-len); }
-    else if(t.type==="ตัดสภาพ"){ adj(g,loc,-len); adj(d,loc,len); }
-    else if(t.type==="รับเข้า"){ adj(g,loc,len); adj(rc,loc,len); }
+  const good=[], damaged=[], recovered=[];
+  liveLocationStock().forEach(L=>{
+    let g=0,d=0,rc=0;
+    Object.keys(L.bySize).forEach(bw=>{ const r=sizeRatio(bw); g+=L.bySize[bw]*r.g; d+=L.bySize[bw]*r.d; });
+    Object.keys(L.recBySize||{}).forEach(bw=>{ rc+=L.recBySize[bw]; });
+    const smu=L.smu||0;
+    if(g>0.05) good.push({loc:L.loc, m:Math.round(g*10)/10, smu});
+    if(d>0.05) damaged.push({loc:L.loc, m:Math.round(d*10)/10, smu});
+    if(rc>0.05) recovered.push({loc:L.loc, m:Math.round(rc*10)/10, smu});
   });
-  const toArr = map => Object.keys(map)
-    .map(loc=>({loc, m:Math.round(map[loc].m*10)/10, smu:map[loc].smu}))
-    .filter(r=>r.m>0.05);
-  return { good:toArr(g), damaged:toArr(d), recovered:toArr(rc) };
+  return { good, damaged, recovered };
 }
 
 function renderDrill(cat){
   const meta = DRILL_META[cat]; if(!meta) return;
   const data = (liveLocationDetail()[cat]||[]).slice().sort((a,b)=>b.m-a.m);
   const total = sum(data,r=>r.m);
+  const estTag = (cat==="recovered") ? "" : `<span class="est-badge">ประมาณการ</span>`;
   $("#drillPanel").classList.remove("hide");
   $("#drillTitle").innerHTML =
-    `📍 <span style="color:${meta.color}">${meta.title}</span> — กระจายตามจุด
+    `📍 <span style="color:${meta.color}">${meta.title}</span> — กระจายตามจุด ${estTag}
      <span class="h3-note">(รวม ${fmt(total,1)} ม. · ${data.length} จุด)</span>`;
+  const dn=$("#drillNote");
+  if(cat==="recovered"){ dn.classList.add("hide"); }
+  else{
+    dn.classList.remove("hide");
+    dn.innerHTML = `* เป็น<b>ค่าประมาณการ</b>จากความยาวที่กองจริงแต่ละจุด × สัดส่วนดี/เสียของขนาดนั้น `
+      + `— ใช้เปรียบเทียบว่า<b>จุดไหนมีมาก/น้อย</b> (ผลรวมครอบคลุมสายพานที่กองจริงทุกจุด จึงสูงกว่ายอดดี/เสียที่จัดประเภทแล้วทั้งระบบ)`;
+  }
 
   // chart
   drawLocBar("drillBar", data.map(r=>r.loc),
@@ -309,22 +351,26 @@ const SIZE_ORDER  = ["1800","2000","2200","2400"];
 const baseWidth = sz => { const m=String(sz).match(/\d+/); return m?m[0]:String(sz); };
 
 /* คงคลังรายจุด "สด" = snapshot จาก Excel ปรับด้วย transactions
-   เบิกจ่าย → ลด, รับเข้า → เพิ่ม, ตัดสภาพ → คงเดิม (ดี→เสีย ของยังอยู่ที่จุด) */
+   เบิกจ่าย → ลดความยาว, รับเข้า → เพิ่มความยาว+เก็บกู้, ตัดสภาพ → คงเดิม (ดี→เสีย ของยังอยู่ที่จุด) */
 function liveLocationStock(){
   const map = {};
-  (window.LOCATION_STOCK||[]).forEach(r=>{ map[r.loc]=Object.assign({}, r.bySize); });
+  (window.LOCATION_STOCK||[]).forEach(r=>{
+    map[r.loc]={ len:Object.assign({},r.bySize), rec:Object.assign({},r.recBySize||{}), smu:r.smu||0 };
+  });
   (DATA.transactions||[]).forEach(t=>{
     const loc=t.location; if(!loc) return;
     const bw=baseWidth(t.size), len=+t.length||0;
-    if(!map[loc]) map[loc]={};
-    if(map[loc][bw]==null) map[loc][bw]=0;
-    if(t.type==="เบิกจ่าย")      map[loc][bw]-=len;
-    else if(t.type==="รับเข้า")  map[loc][bw]+=len;
+    if(!map[loc]) map[loc]={len:{},rec:{},smu:0};
+    if(map[loc].len[bw]==null) map[loc].len[bw]=0;
+    if(t.type==="เบิกจ่าย")      map[loc].len[bw]-=len;
+    else if(t.type==="รับเข้า"){ map[loc].len[bw]+=len;
+      if(map[loc].rec[bw]==null) map[loc].rec[bw]=0; map[loc].rec[bw]+=len; }
   });
   return Object.keys(map).map(loc=>{
-    const bySize={};
-    Object.keys(map[loc]).forEach(k=>{ const v=Math.round(map[loc][k]*10)/10; if(v>0.05) bySize[k]=v; });
-    return {loc, bySize};
+    const bySize={}, recBySize={};
+    Object.keys(map[loc].len).forEach(k=>{ const v=Math.round(map[loc].len[k]*10)/10; if(v>0.05) bySize[k]=v; });
+    Object.keys(map[loc].rec).forEach(k=>{ const v=Math.round(map[loc].rec[k]*10)/10; if(v>0.05) recBySize[k]=v; });
+    return {loc, bySize, recBySize, smu:map[loc].smu};
   });
 }
 

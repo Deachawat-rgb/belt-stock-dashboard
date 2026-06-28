@@ -58,12 +58,15 @@
   <section id="tab-stock">
     <div class="kpis" id="stockKpis"></div>
 
+    <div class="est-note hide" id="estNote"></div>
+
     <!-- Drill-down: คลิกการ์ด ดี/เสีย/เก็บกู้ แล้วดูแยกตามจุด -->
     <div id="drillPanel" class="panel hide" style="margin-bottom:16px">
       <div class="drill-head">
         <h3 id="drillTitle"></h3>
         <button class="btn" id="drillClose" type="button">✕ ปิด</button>
       </div>
+      <div id="drillNote" class="drill-note hide"></div>
       <div class="chart-box tall"><canvas id="drillBar"></canvas></div>
       <div class="tbl-wrap" style="margin-top:14px">
         <table id="drillTable">
@@ -159,7 +162,6 @@
 <script src="assets/config.js"></script>
 <script src="assets/sample-data.js"></script>
 <script src="assets/locations-data.js"></script>
-<script src="assets/location-detail.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
