@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>รายงานสรุปสายพานคงคลัง — Belt Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --primary:#2563eb;
+    --green:#16a34a; --red:#dc2626; --teal:#0d9488; --amber:#d97706;
+  }
+  body{font-family:'Noto Sans Thai',system-ui,sans-serif;background:#e9edf3;color:var(--ink);
+    font-size:12px;line-height:1.4;padding:18px 0}
+  /* ---- Toolbar (ไม่พิมพ์) ---- */
+  .toolbar{max-width:210mm;margin:0 auto 14px;display:flex;gap:10px;align-items:center;padding:0 6px}
+  .toolbar .sp{flex:1}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 16px;font-size:13px;
+    font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .btn:hover{filter:brightness(.97)}
+  /* ---- A4 sheet ---- */
+  .sheet{width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:13mm 14mm;
+    box-shadow:0 2px 16px rgba(16,24,40,.14)}
+  /* header */
+  .r-brand{display:flex;align-items:center;gap:12px;border-bottom:2.5px solid var(--primary);padding-bottom:9px}
+  .r-brand img{height:46px;width:auto}
+  .r-co1{font-weight:800;font-size:15px;letter-spacing:.3px}
+  .r-co2{font-weight:700;font-size:9px;color:#ed6b23;letter-spacing:3px}
+  .r-co3{font-size:8.5px;color:#9ca3af}
+  .r-brand .sp{flex:1}
+  .r-brand .rgt{text-align:right}
+  .r-brand .rgt .t1{font-weight:800;font-size:13px;color:var(--primary)}
+  .r-brand .rgt .t2{font-size:10px;color:var(--muted)}
+  /* title */
+  .r-title{text-align:center;margin:14px 0 4px}
+  .r-title h1{font-size:20px;font-weight:800;letter-spacing:.3px}
+  .r-title .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .r-meta{display:flex;justify-content:center;gap:22px;font-size:11px;color:var(--muted);
+    margin:8px 0 14px;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:6px 0}
+  .r-meta b{color:var(--ink)}
+  /* KPI */
+  .r-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
+  .kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;border-left-width:4px}
+  .kpi .lab{font-size:10.5px;color:var(--muted);font-weight:600}
+  .kpi .val{font-size:23px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
+  .kpi .un{font-size:11px;font-weight:600;color:var(--muted)}
+  .kpi .sub{font-size:10px;color:var(--muted);margin-top:2px}
+  .k-all{border-left-color:var(--primary)} .k-all .val{color:var(--primary)}
+  .k-good{border-left-color:var(--green)} .k-good .val{color:var(--green)}
+  .k-bad{border-left-color:var(--red)} .k-bad .val{color:var(--red)}
+  .k-rec{border-left-color:var(--teal)} .k-rec .val{color:var(--teal)}
+  /* two columns */
+  .r-cols{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin-bottom:12px}
+  .panel{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .panel h3{font-size:12.5px;font-weight:800;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th,td{padding:5px 6px;text-align:right;border-bottom:1px solid #f1f3f6}
+  th{color:var(--muted);font-weight:700;font-size:10px}
+  th.l,td.l{text-align:left}
+  tfoot td{font-weight:800;border-top:1.5px solid var(--line);border-bottom:none}
+  .txt-g{color:var(--green);font-weight:700} .txt-r{color:var(--red);font-weight:700}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700}
+  .p-g{background:#dcfce7;color:#166534} .p-a{background:#fef3c7;color:#92400e} .p-r{background:#fee2e2;color:#991b1b}
+  /* insight */
+  .ins{font-size:11px;line-height:1.6}
+  .ins .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #eef0f3}
+  .ins .row b{font-weight:800}
+  .warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-top:9px;
+    font-size:10.5px;color:#9a3412;line-height:1.5}
+  .warn .h{font-weight:800;color:#c2410c}
+  .toploc{margin-top:9px}
+  .toploc .lrow{display:flex;align-items:center;gap:6px;font-size:10.5px;margin:3px 0}
+  .toploc .nm{width:74px;flex:none;font-weight:700}
+  .toploc .track{flex:1;height:9px;background:#eef2ff;border-radius:5px;overflow:hidden}
+  .toploc .track>span{display:block;height:100%;background:var(--primary);border-radius:5px}
+  .toploc .mv{width:56px;text-align:right;flex:none;color:var(--muted)}
+  /* signature */
+  .r-sign{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:20px}
+  .sign{text-align:center}
+  .sign .line{border-bottom:1px dotted #9ca3af;height:34px;margin-bottom:5px}
+  .sign .nm{font-size:11px;font-weight:700}
+  .sign .role{font-size:10px;color:var(--muted)}
+  .sign .dt{font-size:9.5px;color:var(--muted);margin-top:8px}
+  .r-foot{margin-top:16px;text-align:center;font-size:9px;color:#9ca3af;border-top:1px solid var(--line);padding-top:6px}
+  /* ---- print ---- */
+  @page{size:A4 portrait;margin:0}
+  @media print{
+    body{background:#fff;padding:0}
+    .toolbar{display:none}
+    .sheet{box-shadow:none;margin:0;width:210mm;min-height:297mm}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a class="btn" href="index.html">← กลับ Dashboard</a>
+  <span class="sp"></span>
+  <span id="loadState" style="font-size:12px;color:#6b7280"></span>
+  <button class="btn primary" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+</div>
+
+<div class="sheet" id="sheet">
+  <!-- header -->
+  <div class="r-brand">
+    <img src="assets/logo.jpg" alt="ITD">
+    <div>
+      <div class="r-co1">ITALIAN-THAI DEVELOPMENT</div>
+      <div class="r-co2">DEVELOPMENT</div>
+      <div class="r-co3">Public Company Limited</div>
+    </div>
+    <span class="sp"></span>
+    <div class="rgt">
+      <div class="t1">Mae Moh Mine · Phase 9</div>
+      <div class="t2">เหมืองแม่เมาะ จ.ลำปาง · ระบบสายพานลำเลียง</div>
+    </div>
+  </div>
+
+  <!-- title -->
+  <div class="r-title">
+    <h1>รายงานสรุปสายพานคงคลัง</h1>
+    <div class="sub">Conveyor Belt Stock Summary Report</div>
+  </div>
+  <div class="r-meta">
+    <div>ข้อมูล ณ: <b id="mDate">—</b></div>
+    <div>แหล่งข้อมูล: <b id="mSrc">—</b></div>
+    <div>จำนวนขนาด: <b id="mSizes">—</b></div>
+  </div>
+
+  <!-- KPI -->
+  <div class="r-kpis" id="kpis"></div>
+
+  <!-- columns -->
+  <div class="r-cols">
+    <div class="panel">
+      <h3>สรุปสต็อกแยกตามขนาดสายพาน</h3>
+      <table id="tbl">
+        <thead><tr>
+          <th class="l">ขนาด</th><th>เสีย (ม.)</th><th>ดี (ม.)</th><th>รวม (ม.)</th><th>% ดี</th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>ภาพรวม &amp; ข้อสังเกต</h3>
+      <div class="ins" id="ins"></div>
+      <div class="warn" id="warn"></div>
+      <div class="toploc" id="toploc"></div>
+    </div>
+  </div>
+
+  <!-- signature -->
+  <div class="r-sign">
+    <div class="sign"><div class="line"></div><div class="nm">(............................)</div>
+      <div class="role">ผู้จัดทำ / เจ้าหน้าที่สต็อกสายพาน</div><div class="dt">วันที่ ......./......./.......</div></div>
+    <div class="sign"><div class="line"></div><div class="nm">(............................)</div>
+      <div class="role">ผู้ตรวจสอบ / หัวหน้างาน</div><div class="dt">วันที่ ......./......./.......</div></div>
+    <div class="sign"><div class="line"></div><div class="nm">(............................)</div>
+      <div class="role">ผู้อนุมัติ / ผู้จัดการฝ่าย</div><div class="dt">วันที่ ......./......./.......</div></div>
+  </div>
+
+  <div class="r-foot" id="foot">— สร้างจากระบบ Belt Stock Dashboard —</div>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/sample-data.js"></script>
+<script src="assets/locations-data.js"></script>
+<script>
+const CFG = window.APP_CONFIG || {};
+const fmt = (n,d=0)=>(Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct = (a,b)=> b ? a/b*100 : 0;
+const sum = (a,f)=>a.reduce((s,x)=>s+(Number(f(x))||0),0);
+function thDateTime(iso){
+  const d = iso?new Date(iso):new Date();
+  if(isNaN(d)) return "—";
+  return d.toLocaleDateString("th-TH",{day:"2-digit",month:"long",year:"numeric"}) +
+    " เวลา " + d.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}) + " น.";
+}
+
+async function load(){
+  let data=null, src="ข้อมูลตัวอย่าง";
+  if(CFG.API_URL){
+    try{
+      const r = await fetch(CFG.API_URL + (CFG.API_URL.includes("?")?"&":"?") + "t=" + Date.now());
+      if(r.ok){ data = await r.json(); src="เชื่อมต่อ Realtime (Google Sheet)"; }
+    }catch(e){}
+  }
+  if(!data) data = window.SAMPLE_DATA;
+  render(data, src);
+  document.getElementById("loadState").textContent = "โหลดข้อมูลแล้ว";
+}
+
+function render(j, src){
+  const stock = (j.stock||[]).map(s=>({size:String(s.size),good:+s.good||0,damaged:+s.damaged||0,recovered:+s.recovered||0}));
+  const tGood=sum(stock,s=>s.good), tDmg=sum(stock,s=>s.damaged), tRec=sum(stock,s=>s.recovered);
+  const tAll=tGood+tDmg;
+
+  document.getElementById("mDate").textContent = thDateTime(j.updatedAt);
+  document.getElementById("mSrc").textContent = src;
+  document.getElementById("mSizes").textContent = stock.length + " ขนาด";
+
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi k-all"><div class="lab">สายพานทั้งหมด</div><div class="val">${fmt(tAll)} <span class="un">ม.</span></div><div class="sub">${stock.length} ขนาด</div></div>
+    <div class="kpi k-good"><div class="lab">ดี / พร้อมใช้</div><div class="val">${fmt(tGood)}</div><div class="sub">${fmt(pct(tGood,tAll),1)}% ของทั้งหมด</div></div>
+    <div class="kpi k-bad"><div class="lab">เสีย / เสื่อมสภาพ</div><div class="val">${fmt(tDmg)}</div><div class="sub">${fmt(pct(tDmg,tAll),1)}% ของทั้งหมด</div></div>
+    <div class="kpi k-rec"><div class="lab">เก็บกู้ได้ (สะสม)</div><div class="val">${fmt(tRec)}</div><div class="sub">หน่วย: เมตร</div></div>`;
+
+  // table
+  const tb=document.querySelector("#tbl tbody"); tb.innerHTML="";
+  stock.forEach(s=>{
+    const all=s.good+s.damaged, p=pct(s.good,all);
+    tb.innerHTML += `<tr><td class="l"><b>${s.size}</b></td>
+      <td class="txt-r">${fmt(s.damaged,1)}</td><td class="txt-g">${fmt(s.good,1)}</td>
+      <td>${fmt(all,1)}</td><td><span class="pill ${p>=60?'p-g':(p>=40?'p-a':'p-r')}">${fmt(p,0)}%</span></td></tr>`;
+  });
+  document.querySelector("#tbl tfoot").innerHTML = `<tr><td class="l">รวมทั้งหมด</td>
+    <td>${fmt(tDmg,1)}</td><td>${fmt(tGood,1)}</td><td>${fmt(tAll,1)}</td><td>${fmt(pct(tGood,tAll),0)}%</td></tr>`;
+
+  // insight
+  const worst = stock.slice().filter(s=>s.good+s.damaged>0).sort((a,b)=>pct(a.good,a.good+a.damaged)-pct(b.good,b.good+b.damaged))[0];
+  document.getElementById("ins").innerHTML = `
+    <div class="row"><span>สัดส่วนพร้อมใช้ (ดี)</span><b class="txt-g">${fmt(pct(tGood,tAll),1)}%</b></div>
+    <div class="row"><span>สัดส่วนเสื่อมสภาพ (เสีย)</span><b class="txt-r">${fmt(pct(tDmg,tAll),1)}%</b></div>
+    <div class="row"><span>เก็บกู้ได้สะสม</span><b>${fmt(tRec)} ม.</b></div>
+    <div class="row"><span>ขนาดที่มีของดีมากสุด</span><b>${bestSize(stock)}</b></div>`;
+
+  if(worst){
+    const wp=pct(worst.good,worst.good+worst.damaged);
+    document.getElementById("warn").innerHTML =
+      `<span class="h">⚠ ควรเฝ้าระวัง / เร่งจัดหา</span><br>สายพานขนาด <b>${worst.size}</b> มีของดีเพียง <b>${fmt(wp,1)}%</b> `
+      + `(ดี ${fmt(worst.good,0)} ม. / เสีย ${fmt(worst.damaged,0)} ม.) — ต่ำกว่าเกณฑ์ปลอดภัย 50%`;
+  }
+
+  // top locations by stored length (snapshot)
+  const locs = (window.LOCATION_STOCK||[]).map(r=>({loc:r.loc, m:sum(Object.keys(r.bySize),k=>r.bySize[k])}))
+    .sort((a,b)=>b.m-a.m).slice(0,6);
+  const maxM = locs.length?locs[0].m:1;
+  document.getElementById("toploc").innerHTML =
+    `<div style="font-weight:800;font-size:11px;margin-bottom:4px">จุดที่มีสายพานมากสุด (6 อันดับ)</div>` +
+    locs.map(l=>`<div class="lrow"><span class="nm">${l.loc}</span>
+      <span class="track"><span style="width:${l.m/maxM*100}%"></span></span>
+      <span class="mv">${fmt(l.m,0)} ม.</span></div>`).join("");
+
+  document.getElementById("foot").textContent =
+    "สร้างจากระบบ Belt Stock Dashboard · พิมพ์เมื่อ " + thDateTime(new Date().toISOString());
+}
+function bestSize(stock){
+  const b = stock.slice().sort((a,b)=>b.good-a.good)[0];
+  return b ? (b.size+" ("+fmt(b.good,0)+" ม.)") : "—";
+}
+load();
+</script>
+</body>
+</html>
